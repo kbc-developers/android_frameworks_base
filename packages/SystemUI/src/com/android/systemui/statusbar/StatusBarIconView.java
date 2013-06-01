@@ -28,6 +28,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.UserHandle;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -86,7 +87,11 @@ public class StatusBarIconView extends AnimatedImageView {
             setScaleX(scale);
             setScaleY(scale);
             final float alpha = res.getFraction(R.dimen.status_bar_icon_drawing_alpha, 1, 1);
-            setAlpha(alpha);
+            if (SystemProperties.getBoolean("persist.tweak.sb_icon_alpha", true)) {
+                setAlpha(alpha);
+            } else {
+                setAlpha(255);
+            }
         }
 
         setScaleType(ImageView.ScaleType.CENTER);
@@ -101,7 +106,11 @@ public class StatusBarIconView extends AnimatedImageView {
         setScaleX(scale);
         setScaleY(scale);
         final float alpha = res.getFraction(R.dimen.status_bar_icon_drawing_alpha, 1, 1);
-        setAlpha(alpha);
+        if (SystemProperties.getBoolean("persist.tweak.sb_icon_alpha", true)) {
+            setAlpha(alpha);
+        } else {
+            setAlpha(255);
+        }
     }
 
     private static boolean streq(String a, String b) {

@@ -41,6 +41,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -535,6 +536,9 @@ public class TabletStatusBar extends BaseStatusBar implements
 
         // where the icons go
         mIconLayout = (NotificationIconArea.IconLayout) sb.findViewById(R.id.icons);
+        if (!SystemProperties.getBoolean("persist.tweak.sb_icon_alpha", true)) {
+            mIconLayout.setAlpha(255);
+        }
 
         mNotificationPeekTapDuration = ViewConfiguration.getTapTimeout();
         mNotificationFlingVelocity = 300; // px/s
