@@ -28,6 +28,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.util.Log;
 
 import com.android.internal.telephony.IWapPushManager;
@@ -60,6 +61,17 @@ public class WapPushManager extends Service {
     private static final boolean DEBUG_SQL = false;
     private static final boolean LOCAL_LOGV = false;
 
+    private static final String[][] mInitialDataList = {
+        {"7", "application/vnd.syncml.notification", "jp.co.nttdocomo.fota", "jp.co.nttdocomo.fota.SMSService"},
+        {"36949", "application/vnd.syncml.notification", "com.nttdocomo.android.remotelock", "com.nttdocomo.android.remotelock.SMSService"},
+        {"36956", "application/vnd.wap.emn+wbxml", "jp.co.nttdocomo.carriermail", "jp.co.nttdocomo.carriermail.SMSService"},
+        {"36959", "application/vnd.wap.slc", "com.nttdocomo.android.databackup", "com.nttdocomo.android.databackup.SMSService"},
+        {"36960", "application/vnd.wap.sic", "jp.co.nttdocomo.lcsapp", "jp.co.nttdocomo.lcsapp.SmsReceiver"},
+        {"36961", "application/vnd.wap.slc", "jp.co.nttdocomo.ichannel", "jp.co.nttdocomo.ichannel.SMSService"},
+        {"36962", "application/vnd.wap.slc", "com.nttdocomo.android.iconcier", "com.nttdocomo.android.iconcier.SMSService"},
+        {"36964", "application/vnd.wap.sic", "com.nttdocomo.android.applicationmanager", "com.nttdocomo.android.applicationmanager.DcmProvisioningService"},
+    };
+
     /**
      * Inner class that deals with application ID table
      */
@@ -86,6 +98,8 @@ public class WapPushManager extends Service {
 
             if (DEBUG_SQL) Log.v(LOG_TAG, "sql: " + sql);
             db.execSQL(sql);
+
+            initializeDatabase(db);
         }
 
         @Override
@@ -140,6 +154,20 @@ public class WapPushManager extends Service {
             return ret;
         }
 
+        protected void initializeDatabase(SQLiteDatabase db){
+            for(int i = 0; i < mInitialDataList.length; i++){
+                ContentValues values = new ContentValues();
+                values.put("x_wap_application", mInitialDataList[i][0]);
+                values.put("content_type", mInitialDataList[i][1]);
+                values.put("package_name", mInitialDataList[i][2]);
+                values.put("class_name", mInitialDataList[i][3]);
+                values.put("app_type", WapPushManagerParams.APP_TYPE_SERVICE);
+                values.put("need_signature", 0);
+                values.put("further_processing", 0);
+                values.put("install_order", 0);
+                db.insert(APPID_TABLE_NAME, null, values);
+            }
+        }
     }
 
     /**
@@ -189,6 +217,12 @@ public class WapPushManager extends Service {
             }
             if (LOCAL_LOGV) Log.v(LOG_TAG, "starting " + lastapp.packageName
                     + "/" + lastapp.className);
+
+            if ("jp.co.nttdocomo.carriermail".equals(lastapp.packageName) &&
+                "communicase".equals(SystemProperties.get("persist.tgs3.carriermail", "spmode"))) {
+                lastapp.packageName = "com.nttdocomo.communicase.carriermail";
+                lastapp.className = "com.nttdocomo.communicase.mail.SMSService";
+            }
 
             if (lastapp.needSignature != 0) {
                 if (!signatureCheck(lastapp.packageName)) {
