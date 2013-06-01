@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include <private/android_filesystem_config.h>
+
 #include <androidfw/AssetManager.h>
 #include <utils/threads.h>
 
@@ -39,7 +41,12 @@ class SurfaceControl;
 class BootAnimation : public Thread, public IBinder::DeathRecipient
 {
 public:
-                BootAnimation();
+                BootAnimation(
+                    bool noBootAnimationWait,
+                    const char* animationFile,
+                    const char* audioFile,
+                    const char* movieFile,
+                    float audioVolume);
     virtual     ~BootAnimation();
 
     sp<SurfaceComposerClient> session() const;
@@ -82,6 +89,7 @@ private:
     status_t initTexture(void* buffer, size_t len);
     bool android();
     bool movie();
+    bool stagefright_movie();
 
     void checkExit();
 
@@ -96,7 +104,13 @@ private:
     sp<SurfaceControl> mFlingerSurfaceControl;
     sp<Surface> mFlingerSurface;
     bool        mAndroidAnimation;
+    bool        mMoviePlay;
     ZipFileRO   mZip;
+    char mAnimationFile[PATH_MAX];
+    char mAudioFile[PATH_MAX];
+    char mMovieFile[PATH_MAX];
+    float mAudioVolume;
+    bool mNoBootAnimationWait;
 };
 
 // ---------------------------------------------------------------------------

@@ -46,16 +46,77 @@ int main(int argc, char** argv)
     property_get("debug.sf.nobootanimation", value, "0");
     int noBootAnimation = atoi(value);
     ALOGI_IF(noBootAnimation,  "boot animation disabled");
+
+    if (noBootAnimation == 0) {
+        property_get("persist.sys.nobootanimation", value, "0");
+        noBootAnimation = atoi(value);
+        ALOGI_IF(noBootAnimation,  "boot animation disabled");
+    }
+
+    property_get("persist.sys.nobootanimationwait", value, "0");
+    int noBootAnimationWait = atoi(value);
+    //for compatibility
+    if (noBootAnimationWait == 0) {
+        property_get("persist.sys.nowait_animation", value, "0");
+        noBootAnimationWait = atoi(value);
+    }
+    ALOGI_IF(noBootAnimationWait,  "boot animation wait disabled");
+
+    char bootsoundFile[PROPERTY_VALUE_MAX];
+    float bootsoundVolume = 0.2;
+    property_get("persist.sys.nobootsound", value, "0");
+    int noBootSound = atoi(value);
+    ALOGI_IF(noBootSound,  "boot nobootsound disabled");
+    if (!noBootSound) {
+        property_get("persist.sys.boosound_file", bootsoundFile, "/system/media/bootsound.mp3");
+        ALOGI("bootsound_file=%s", bootsoundFile);
+        property_get("persist.sys.boosound_volume", value, "0.2");
+        bootsoundVolume = atof(value);
+        ALOGI("bootsound_volume=%f", bootsoundVolume);
+    }
+
+    char bootmovieFile[PROPERTY_VALUE_MAX];
+    property_get("persist.sys.nobootmovie", value, "0");
+    int noBootMovie = atoi(value);
+    ALOGI_IF(noBootMovie,  "boot nobootMovie disabled");
+    if (!noBootMovie) {
+        property_get("persist.sys.boomovie_file", bootmovieFile, "/data/local/bootmovie.mp4");
+        ALOGI("bootsound_file=%s", bootmovieFile);
+        property_get("persist.sys.boosound_volume", value, "0.2");
+        bootsoundVolume = atof(value);
+        ALOGI("bootsound_volume=%f", bootsoundVolume);
+    }
+
+    if (argc > 1) {
+        ALOGI("bootanim_file args[1]=%s", argv[1]);
+    }
+    if (argc > 2) {
+        ALOGI("bootsound_file args[2]=%s", argv[2]);
+    }
+    if (argc > 3) {
+        ALOGI("boomovie_file args[3]=%s", argv[3]);
+    }
+
     if (!noBootAnimation) {
+
+        seteuid(AID_GRAPHICS);
 
         sp<ProcessState> proc(ProcessState::self());
         ProcessState::self()->startThreadPool();
 
         // create the boot animation object
-        sp<BootAnimation> boot = new BootAnimation();
+        sp<BootAnimation> boot = new BootAnimation(
+                                         noBootAnimationWait ? true : false,
+                                         noBootAnimation ? NULL : (argc > 1 ? argv[1] : NULL),
+                                         noBootSound ? NULL : (argc > 2 ? argv[2] : bootsoundFile),
+                                         noBootMovie ? NULL : (argc > 3 ? argv[3] : bootmovieFile),
+                                         bootsoundVolume);
 
         IPCThreadState::self()->joinThreadPool();
 
+        seteuid(AID_ROOT);
+        ALOGI("[BOOT] set sys.bootanim_completed");
+        property_set("sys.bootanim_completed", "1");
     }
     return 0;
 }
