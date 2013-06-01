@@ -29,6 +29,7 @@ import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.StrictMode;
+import android.os.SystemProperties;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -427,6 +428,7 @@ public abstract class AbsListView extends AdapterView<ListAdapter> implements Te
      * bitmap cache after scrolling.
      */
     boolean mScrollingCacheEnabled;
+    boolean mScrollingCacheOverride = false;
 
     /**
      * Whether or not to enable the fast scroll feature on this list
@@ -780,7 +782,7 @@ public abstract class AbsListView extends AdapterView<ListAdapter> implements Te
         boolean stackFromBottom = a.getBoolean(R.styleable.AbsListView_stackFromBottom, false);
         setStackFromBottom(stackFromBottom);
 
-        boolean scrollingCacheEnabled = a.getBoolean(R.styleable.AbsListView_scrollingCache, true);
+        boolean scrollingCacheEnabled = a.getBoolean(R.styleable.AbsListView_scrollingCache, mScrollingCacheOverride);
         setScrollingCacheEnabled(scrollingCacheEnabled);
 
         boolean useTextFilter = a.getBoolean(R.styleable.AbsListView_textFilterEnabled, false);
@@ -807,12 +809,14 @@ public abstract class AbsListView extends AdapterView<ListAdapter> implements Te
     }
 
     private void initAbsListView() {
+        mScrollingCacheOverride = SystemProperties.getBoolean("persist.tweak.scrolling_cache", true);
+
         // Setting focusable in touch mode will set the focusable property to true
         setClickable(true);
         setFocusableInTouchMode(true);
         setWillNotDraw(false);
         setAlwaysDrawnWithCacheEnabled(false);
-        setScrollingCacheEnabled(true);
+        setScrollingCacheEnabled(mScrollingCacheOverride);
 
         final ViewConfiguration configuration = ViewConfiguration.get(mContext);
         mTouchSlop = configuration.getScaledTouchSlop();
