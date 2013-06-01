@@ -1407,12 +1407,18 @@
   <java-symbol type="layout" name="keyguard_account_view" />
   <java-symbol type="layout" name="recent_apps_dialog" />
   <java-symbol type="layout" name="screen_action_bar" />
+  <java-symbol type="layout" name="screen_action_bar_bottom" />
   <java-symbol type="layout" name="screen_custom_title" />
+  <java-symbol type="layout" name="screen_custom_title_bottom" />
   <java-symbol type="layout" name="screen_progress" />
+  <java-symbol type="layout" name="screen_progress_bottom" />
   <java-symbol type="layout" name="screen_simple" />
+  <java-symbol type="layout" name="screen_simple_bottom" />
   <java-symbol type="layout" name="screen_simple_overlay_action_mode" />
   <java-symbol type="layout" name="screen_title" />
+  <java-symbol type="layout" name="screen_title_bottom" />
   <java-symbol type="layout" name="screen_title_icons" />
+  <java-symbol type="layout" name="screen_title_icons_bottom" />
   <java-symbol type="layout" name="keyguard_host_view" />
   <java-symbol type="layout" name="keyguard_transport_control_view" />
   <java-symbol type="layout" name="keyguard_status_view" />
