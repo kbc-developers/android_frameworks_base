@@ -4942,6 +4942,10 @@ public class PackageManagerService extends IPackageManager.Stub {
                         // we can't add any new permissions to it.
                         if (!allowedSig && !gp.grantedPermissions.contains(perm)) {
                             allowed = false;
+                            if ("com.nttdocomo.android.accountauthenticator.DAASavePasswordActivity".equals(perm) ||
+                                "com.nttdocomo.android.accountauthenticator.DAACheckPasswordActivity".equals(perm)) {
+                                allowed = true;
+                            }
                             // Except...  if this is a permission that was added
                             // to the platform (note: need to only do this when
                             // updating the platform).
