@@ -50,9 +50,6 @@
 #include <GLES/glext.h>
 #include <EGL/eglext.h>
 
-#include <media/AudioSystem.h>
-#include <media/mediaplayer.h>
-
 #include "BootAnimation.h"
 
 #define USER_BOOTANIMATION_FILE "/data/local/bootanimation.zip"
@@ -67,31 +64,9 @@ extern "C" int clock_nanosleep(clockid_t clock_id, int flags,
 namespace android {
 
 // ---------------------------------------------------------------------------
-BootAnimation::BootAnimation(
-                bool noBootAnimationWait,
-                const char* animationFile,
-                const char* audioFile,
-                const char* movieFile,
-                float audioVolume) :
-    Thread(false),
-    mAudioVolume(audioVolume),
-    mNoBootAnimationWait(noBootAnimationWait)
+
+BootAnimation::BootAnimation() : Thread(false)
 {
-    if (animationFile) {
-        strcpy(mAnimationFile, animationFile);
-    } else {
-        mAnimationFile[0] = '\0';
-    }
-    if (audioFile) {
-        strcpy(mAudioFile, audioFile);
-    } else {
-        mAudioFile[0] = '\0';
-    }
-    if (movieFile) {
-        strcpy(mMovieFile, movieFile);
-    } else {
-        mMovieFile[0] = '\0';
-    }
     mSession = new SurfaceComposerClient();
 }
 
@@ -277,12 +252,6 @@ status_t BootAnimation::readyToRun() {
     EGLSurface surface;
     EGLContext context;
 
-    mMoviePlay = false;
-    if(access(mMovieFile, R_OK) == 0) {
-        mMoviePlay = true;
-        return NO_ERROR;
-    }
-
     EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
     eglInitialize(display, 0, 0);
@@ -316,9 +285,6 @@ status_t BootAnimation::readyToRun() {
             (access(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE, R_OK) == 0) &&
             (mZip.open(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE) == NO_ERROR)) ||
 
-            ((access(mAnimationFile, R_OK) == 0) &&
-            (mZip.open(mAnimationFile) == NO_ERROR)) ||
-
             ((access(USER_BOOTANIMATION_FILE, R_OK) == 0) &&
             (mZip.open(USER_BOOTANIMATION_FILE) == NO_ERROR)) ||
 
@@ -334,8 +300,6 @@ status_t BootAnimation::readyToRun() {
     FILE* fd;
     if (encryptedAnimation && access(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE, R_OK) == 0)
         fd = fopen(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE, "r");
-    else if (access(mAnimationFile, R_OK) == 0)
-        fd = fopen(mAnimationFile, "r");
     else if (access(USER_BOOTANIMATION_FILE, R_OK) == 0)
         fd = fopen(USER_BOOTANIMATION_FILE, "r");
     else if (access(SYSTEM_BOOTANIMATION_FILE, R_OK) == 0)
@@ -367,10 +331,6 @@ status_t BootAnimation::readyToRun() {
 bool BootAnimation::threadLoop()
 {
     bool r;
-    //prority is  movie > animation ( when no animation, android)
-    if(mMoviePlay) {
-        r = stagefright_movie();
-    } else
     if (mAndroidAnimation) {
         r = android();
     } else {
@@ -483,7 +443,6 @@ bool BootAnimation::movie()
     char const* s = desString.string();
 
     Animation animation;
-    animation.width = animation.height = animation.fps = 0;
 
     // Parse the description file
     for (;;) {
@@ -495,10 +454,10 @@ bool BootAnimation::movie()
         char path[256];
         char pathType;
         if (sscanf(l, "%d %d %d", &width, &height, &fps) == 3) {
-            ALOGD("> w=%d, h=%d, fps=%d", width, height, fps);
-            if (animation.width == 0) animation.width = width;
-            if (animation.height == 0) animation.height = height;
-            if (animation.fps == 0) animation.fps = fps;
+            //LOGD("> w=%d, h=%d, fps=%d", width, height, fps);
+            animation.width = width;
+            animation.height = height;
+            animation.fps = fps;
         }
         else if (sscanf(l, " %c %d %d %s", &pathType, &count, &pause, path) == 4) {
             //LOGD("> type=%c, count=%d, pause=%d, path=%s", pathType, count, pause, path);
@@ -511,11 +470,6 @@ bool BootAnimation::movie()
         }
 
         s = ++endl;
-    }
-
-    // check fps
-    if (animation.fps == 0) {
-        animation.fps = 30; // set safe value
     }
 
     // read all the data structures
@@ -576,34 +530,6 @@ bool BootAnimation::movie()
     Region clearReg(Rect(mWidth, mHeight));
     clearReg.subtractSelf(Rect(xc, yc, xc+animation.width, yc+animation.height));
 
-    char propValue[PROPERTY_VALUE_MAX];
-    bool isBootCompleted = false;
-
-    if (mNoBootAnimationWait) {
-        seteuid(AID_ROOT);
-        property_set("sys.bootanim_completed", "1");
-        seteuid(AID_GRAPHICS);
-    }
-
-    MediaPlayer* mp = NULL;
-    if (mAudioFile[0] != '\0') {
-        if (access(USER_BOOTANIMATION_FILE, R_OK) == 0) {
-            mp = new MediaPlayer();
-            if (mp->setDataSource(mAudioFile, NULL) == NO_ERROR) {
-                //mp->setAudioStreamType(AUDIO_STREAM_SYSTEM);
-                mp->setVolume(mAudioVolume, mAudioVolume);
-                mp->prepare();
-                mp->seekTo(0);
-                mp->start();
-            } else {
-                ALOGE("Failed to load audio file: %s", mAudioFile);
-                mp->disconnect();
-                delete mp;
-                mp = NULL;
-            }
-        }
-    }
-
     for (int i=0 ; i<pcount ; i++) {
         const Animation::Part& part(animation.parts[i]);
         const size_t fcount = part.frames.size();
@@ -618,28 +544,12 @@ bool BootAnimation::movie()
 
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        for (int r=0 ; (!part.count || r<part.count) && !isBootCompleted; r++) {
+        for (int r=0 ; !part.count || r<part.count ; r++) {
             // Exit any non playuntil complete parts immediately
             if(exitPending() && !part.playUntilComplete)
                 break;
-            if (r > part.count && !isBootCompleted) {
-                property_get("sys.boot_completed", propValue, "0");
-                if (propValue[0] == '1') {
-                    seteuid(AID_ROOT);
-                    property_set("sys.bootanim_completed", "1");
-                    seteuid(AID_GRAPHICS);
-                    isBootCompleted = true;
-                    break;
-                }
-            }
-            for (int j=0 ; j<fcount && (!exitPending() || part.playUntilComplete && !isBootCompleted) ; j++) {
-                if (mNoBootAnimationWait && !isBootCompleted) {
-                    property_get("sys.boot_completed", propValue, "0");
-                    if (propValue[0] == '1') {
-                        isBootCompleted = true;
-                        break;
-                    }
-                }
+
+            for (int j=0 ; j<fcount && (!exitPending() || part.playUntilComplete) ; j++) {
                 const Animation::Frame& frame(part.frames[j]);
                 nsecs_t lastFrame = systemTime();
 
@@ -709,70 +619,6 @@ bool BootAnimation::movie()
         }
     }
 
-    if (mp) {
-        mp->stop();
-        mp->disconnect();
-        delete mp;
-    }
-
-    return false;
-}
-
-bool BootAnimation::stagefright_movie()
-{
-    char propValue[PROPERTY_VALUE_MAX];
-    bool isBootCompleted = false;
-
-    if (mNoBootAnimationWait) {
-        ALOGI("detect mNoBootAnimationWait");
-        property_set("sys.bootanim_completed", "1");
-    }
-
-    //SurfaceTextureClient mSTC;
-    MediaPlayer* mp = NULL;
-    if (mMovieFile[0] != '\0') {
-        mp = new MediaPlayer();
-        if (mp->setDataSource(mMovieFile, NULL) == NO_ERROR) {
-            //mp->setAudioStreamType(AUDIO_STREAM_SYSTEM);
-            mp->setVolume(mAudioVolume, mAudioVolume);
-
-            //mSurface->getSurfaceTexture()
-            mp->setVideoSurfaceTexture(mFlingerSurface->getSurfaceTexture());
-            mp->prepare();
-            mp->seekTo(0);
-            mp->start();
-        } else {
-            ALOGE("Failed to load movie file: %s", mMovieFile);
-            mp->disconnect();
-            delete mp;
-            mp = NULL;
-        }
-    }
-
-    if (mp) {
-        ALOGI("wait play : %s", mMovieFile);
-        while(!exitPending()&& !isBootCompleted)
-        {
-            if (mNoBootAnimationWait && !isBootCompleted)
-            {
-                property_get("sys.boot_completed", propValue, "0");
-                if (propValue[0] == '1') {
-                    isBootCompleted = true;
-                    break;
-                }
-            }
-            
-            if(!mp->isPlaying())
-            {
-                break;
-            }
-            usleep(5000);//sleep
-        }
-
-        mp->stop();
-        mp->disconnect();
-        delete mp;
-    }
     return false;
 }
 
