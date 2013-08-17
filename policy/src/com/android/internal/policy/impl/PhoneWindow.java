@@ -67,7 +67,6 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.provider.Settings;
-import android.os.SystemProperties;
 import android.util.AndroidRuntimeException;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
@@ -242,13 +241,6 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
 
     private int mUiOptions = 0;
 
-    private final int mScreenActionBarResId;
-    private final int mScreenCustomTitleResId;
-    private final int mScreenProgressResId;
-    private final int mScreenSimpleResId;
-    private final int mScreenTitleResId;
-    private final int mScreenTitleIconResId;
-
     private boolean mInvalidatePanelMenuPosted;
     private int mInvalidatePanelMenuFeatures;
     private final Runnable mInvalidatePanelMenuRunnable = new Runnable() {
@@ -273,24 +265,6 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
     public PhoneWindow(Context context) {
         super(context);
         mContext = context;
-        if (SystemProperties.getBoolean("persist.tweak.bottom_actionbar", false)) {
-            mScreenActionBarResId = com.android.internal.R.layout.screen_action_bar_bottom;
-        } else {
-            mScreenActionBarResId = com.android.internal.R.layout.screen_action_bar;
-        }
-        if (SystemProperties.getBoolean("persist.tweak.bottom_titlebar", false)) {
-            mScreenCustomTitleResId = com.android.internal.R.layout.screen_custom_title_bottom;
-            mScreenProgressResId = com.android.internal.R.layout.screen_progress_bottom;
-            mScreenSimpleResId = com.android.internal.R.layout.screen_simple_bottom;
-            mScreenTitleResId = com.android.internal.R.layout.screen_title_bottom;
-            mScreenTitleIconResId = com.android.internal.R.layout.screen_title_icons_bottom;
-        } else {
-            mScreenCustomTitleResId = com.android.internal.R.layout.screen_custom_title;
-            mScreenProgressResId = com.android.internal.R.layout.screen_progress;
-            mScreenSimpleResId = com.android.internal.R.layout.screen_simple;
-            mScreenTitleResId = com.android.internal.R.layout.screen_title;
-            mScreenTitleIconResId = com.android.internal.R.layout.screen_title_icons;
-        }
         mLayoutInflater = LayoutInflater.from(context);
     }
 
@@ -3064,7 +3038,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
                         com.android.internal.R.attr.dialogTitleIconsDecorLayout, res, true);
                 layoutResource = res.resourceId;
             } else {
-                layoutResource = mScreenTitleIconResId;
+                layoutResource = com.android.internal.R.layout.screen_title_icons;
             }
             // XXX Remove this once action bar supports these features.
             removeFeature(FEATURE_ACTION_BAR);
@@ -3073,7 +3047,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
                 && (features & (1 << FEATURE_ACTION_BAR)) == 0) {
             // Special case for a window with only a progress bar (and title).
             // XXX Need to have a no-title version of embedded windows.
-            layoutResource = mScreenProgressResId;
+            layoutResource = com.android.internal.R.layout.screen_progress;
             // System.out.println("Progress!");
         } else if ((features & (1 << FEATURE_CUSTOM_TITLE)) != 0) {
             // Special case for a window with a custom title.
@@ -3084,7 +3058,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
                         com.android.internal.R.attr.dialogCustomTitleDecorLayout, res, true);
                 layoutResource = res.resourceId;
             } else {
-                layoutResource = mScreenCustomTitleResId;
+                layoutResource = com.android.internal.R.layout.screen_custom_title;
             }
             // XXX Remove this once action bar supports these features.
             removeFeature(FEATURE_ACTION_BAR);
@@ -3099,17 +3073,14 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
             } else if ((features & (1 << FEATURE_ACTION_BAR)) != 0) {
                 layoutResource = com.android.internal.R.layout.screen_action_bar;
             } else {
-                    layoutResource = mScreenActionBarResId;
-                }
-            } else {
-                layoutResource = mScreenTitleResId;
+                layoutResource = com.android.internal.R.layout.screen_title;
             }
             // System.out.println("Title!");
         } else if ((features & (1 << FEATURE_ACTION_MODE_OVERLAY)) != 0) {
             layoutResource = com.android.internal.R.layout.screen_simple_overlay_action_mode;
         } else {
             // Embedded, so no decoration is needed.
-            layoutResource = mScreenSimpleResId;
+            layoutResource = com.android.internal.R.layout.screen_simple;
             // System.out.println("Simple!");
         }
 
