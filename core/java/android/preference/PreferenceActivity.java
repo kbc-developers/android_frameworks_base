@@ -31,6 +31,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.SystemProperties;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -522,7 +523,12 @@ public abstract class PreferenceActivity extends ListActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(com.android.internal.R.layout.preference_list_content);
+        if (SystemProperties.getBoolean("persist.kbc.custom_pref_bg", false)) {
+            setContentView(com.android.internal.R.layout.preference_list_content_custom);
+            // TODO: Set background image from file
+        } else {
+            setContentView(com.android.internal.R.layout.preference_list_content);
+        }
 
         mListFooter = (FrameLayout)findViewById(com.android.internal.R.id.list_footer);
         mPrefsContainer = (ViewGroup) findViewById(com.android.internal.R.id.prefs_frame);
